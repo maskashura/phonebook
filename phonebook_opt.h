@@ -8,8 +8,8 @@
 #define OPT 1
 typedef struct __PHONE_BOOK_ENTRY {
     char lastName[MAX_LAST_NAME_SIZE];
+    struct __PHONE_BOOK_TOTAL *total_data;
     struct __PHONE_BOOK_ENTRY *pNext;
-    struct __PHONE_BOOK_DETAIL *detail;
 } entry;
 
 
