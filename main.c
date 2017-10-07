@@ -8,10 +8,20 @@
 
 #ifdef OPT
 #define OUT_FILE "opt.txt"
-#else
-#define OUT_FILE "orig.txt"
+#define HASH_MASK 0
 #endif
 
+#ifdef ORIG
+#define OUT_FILE "orig.txt"
+#define HASH_MASK 0
+#endif
+
+#ifdef HASH
+#define OUT_FILE "hash.txt"
+#define HASH_MASK 1
+#endif
+
+#define indexbox 26 //26 alphabet
 #define DICT_FILE "./dictionary/words.txt"
 
 static double diff_in_second(struct timespec t1, struct timespec t2)
@@ -30,7 +40,7 @@ static double diff_in_second(struct timespec t1, struct timespec t2)
 int main(int argc, char *argv[])
 {
     FILE *fp;
-    int i = 0;
+    int i = 0,index;
     char line[MAX_LAST_NAME_SIZE];
     struct timespec start, end;
     double cpu_time1, cpu_time2;
@@ -43,11 +53,22 @@ int main(int argc, char *argv[])
     }
 
     /* build the entry */
-    entry *pHead, *e;
+    entry *pHead = NULL, *e = NULL; 
+    entry *hash[indexbox], *hHead[indexbox]; //for HASH function
     pHead = (entry *) malloc(sizeof(entry));
     printf("size of entry : %lu bytes\n", sizeof(entry));
     e = pHead;
     e->pNext = NULL;
+
+    //creste & clear the Hash table 
+
+    for(index=0; index< indexbox; index++) {
+        hHead[index] = (entry *) malloc(sizeof(entry));
+        hash[index]= hHead[index];
+ 
+        hash[index]->pNext = NULL;
+    }
+
 
 #if defined(__GNUC__)
     __builtin___clear_cache((char *) pHead, (char *) pHead + sizeof(entry));
@@ -58,7 +79,13 @@ int main(int argc, char *argv[])
             i++;
         line[i - 1] = '\0';
         i = 0;
-        e = append(line, e);
+//#ifdef HASH_MASK
+        if(HASH_MASK==1) { //!
+            index =line[0]-'a';
+            hash[index] = append(line,hash[index]);
+        } else
+//#endif       
+            e = append(line, e);
     }
     clock_gettime(CLOCK_REALTIME, &end);
     cpu_time1 = diff_in_second(start, end);
@@ -70,7 +97,14 @@ int main(int argc, char *argv[])
 
     /* the givn last name to find */
     char input[MAX_LAST_NAME_SIZE] = "zyxel";
-    e = pHead;
+
+//#ifdef HASH_MASK
+    if (HASH_MASK==1) { //!
+        index =line[0]-'a';    //transfer string to int(0 to 26)
+        e = hHead[index];
+    } else
+//#endif
+       e = pHead;
 
     assert(findName(input, e) &&
            "Did you implement findName() in " IMPL "?");
@@ -92,8 +126,26 @@ int main(int argc, char *argv[])
     printf("execution time of append() : %lf sec\n", cpu_time1);
     printf("execution time of findName() : %lf sec\n", cpu_time2);
 
-    if (pHead->pNext) free(pHead->pNext);
+    /*if (pHead->pNext) free(pHead->pNext);
+    free(pHead);*/
+    while(pHead->pNext) {
+        entry *next = pHead->pNext;
+        pHead->pNext = next->pNext;
+        free(next);
+    }
     free(pHead);
+
+  //free the space of HASH table
+    for (i = 0; i < indexbox; i++) {
+
+        while(hHead[i]->pNext) {
+            entry *next = hHead[i]->pNext;
+            hHead[i]->pNext = next->pNext;
+            free(next);
+        }
+        free(hHead[i]);
+    }
+
 
     return 0;
 }
